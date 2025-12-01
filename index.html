@@ -400,6 +400,48 @@ failBtn.addEventListener("click", () => markPayment("CANCELLED"));
 setIdleScreen();
 applyUrlParamsAndMaybeGenerate();
 </script>
+<script>
+// 1) This is the URL of the shared display page we created
+const QR_DISPLAY_BASE_URL = "https://kgangola.github.io/jls-qr-display/qr-display.html";
 
+// 2) Helper to open / reuse the same second-screen window
+function openQrDisplay(params) {
+  const url = new URL(QR_DISPLAY_BASE_URL);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  });
+
+  // "qrScreen" = always use the SAME window on the second screen
+  const features = "toolbar=no,location=no,status=no,menubar=no,scrollbars=no,resizable=yes";
+  window.open(url.toString(), "qrScreen", features);
+}
+
+// 3) Helper to read selected company (change if your markup is different)
+function getSelectedCompany() {
+  const checked = document.querySelector('input[name="company"]:checked');
+  return checked ? checked.value : "J";
+}
+
+// 4) F9 = send PAYMENT QR to second screen
+document.addEventListener("keydown", (e) => {
+  if (e.key === "F9") {
+    e.preventDefault();
+
+    // ⚠️ If your input IDs are different, change "invoice" and "amount" here
+    const company = getSelectedCompany();
+    const invoice = document.getElementById("invoice").value.trim();
+    const amount  = document.getElementById("amount").value.trim();
+
+    openQrDisplay({
+      mode: "payment",
+      company,
+      invoice,
+      amount
+    });
+  }
+});
+</script>
 </body>
 </html>
