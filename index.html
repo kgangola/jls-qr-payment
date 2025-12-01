@@ -180,10 +180,10 @@
           Waiting for QR…
         </div>
 
-        <!-- QR code box -->
+        <!-- QR Code -->
         <div id="qrCode" style="display:none;"></div>
 
-        <!-- Success image -->
+        <!-- Success Image -->
         <img id="successImage"
              src="https://raw.githubusercontent.com/kgangola/jls-qr-payment/main/image.png" />
 
@@ -215,15 +215,18 @@ let qrInstance = null;
 // Normalize Busy company line OR J/C shortcut
 function normalizeCompanyName(raw) {
   if (!raw) return "";
-  let base = raw.trim().toUpperCase();
 
-  // Shortcuts
-  if (base === "J") return "JLS TRADING CO";
-  if (base === "C") return "JIWAN LAL SAH GANGOLA & SONS";
+  let trimmed = raw.trim();
+  let upper = trimmed.toUpperCase();
 
-  // Take text before first "(" for Busy line
-  base = base.split("(")[0];
+  // Shortcuts first
+  if (upper === "J") return "JLS TRADING CO";
+  if (upper === "C") return "JIWAN LAL SAH GANGOLA & SONS";
+
+  // Original behaviour for Busy line
+  let base = trimmed.split("(")[0];
   base = base.replace(/\s+/g, " ").trim();
+  base = base.toUpperCase();
   base = base.replace(/\./g, "");
   return base;
 }
@@ -285,7 +288,7 @@ function setPendingScreen(payment) {
     `Company: <b>${payment.companyDisplay}</b><br>` +
     `Amount: <b>₹ ${payment.amount}</b>`;
 
-  // Soundbox announcement status
+  // Soundbox announcement text
   statusText.textContent = "Status: Soundbox Announcement";
   statusText.className = "status pending";
 
@@ -293,7 +296,6 @@ function setPendingScreen(payment) {
   failBtn.disabled = false;
 }
 
-// SUCCESS / FAILURE
 function markPayment(status) {
   if (!currentPayment || currentPayment.status !== "PENDING") return;
   currentPayment.status = status;
@@ -313,7 +315,7 @@ function markPayment(status) {
     statusText.textContent = "Status: PAYMENT FAILED";
     statusText.className = "status cancelled";
 
-    // Quick reset on failure
+    // Quick reset for failure
     setTimeout(setIdleScreen, 800);
   }
 }
@@ -345,12 +347,11 @@ generateBtn.addEventListener("click", () => {
   const normalizedName = normalizeCompanyName(rawCompany);
   const vpa = getVpaForCompany(normalizedName);
   if (!vpa) {
-    alert("Could not identify company. Check spelling or use J / C.");
+    alert("Could not identify company. Check Busy line or use J / C.");
     return;
   }
 
-  const companyDisplayRaw = rawCompany.split("(")[0].trim();
-  const companyDisplay = companyDisplayRaw || normalizedName;
+  const companyDisplay = rawCompany.split("(")[0].trim() || normalizedName;
   const amount = Number(amountStr).toFixed(2);
   const upiUrl = buildUpiUrl(vpa, companyDisplay, amount);
 
