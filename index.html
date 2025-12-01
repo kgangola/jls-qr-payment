@@ -99,6 +99,11 @@
   #qrCode {
     margin-bottom: 8px;
   }
+  #successImage {
+    display: none;
+    width: 220px;
+    margin-bottom: 8px;
+  }
   .payment-info {
     font-size: 14px;
     margin-top: 4px;
@@ -142,13 +147,13 @@
       <h2>Step 1 – Enter Billing Details</h2>
 
       <label for="companyLine">
-        Company line from Busy
+        Company line from Busy or type J / C
         <span style="font-weight: normal; font-size: 12px;">
-          (e.g. <i>JLS Trading Co. (2025-26) (COMP0005)</i>)
+          (e.g. <i>JLS Trading Co. (2025-26) (COMP0005)</i> or just <b>J</b> / <b>C</b>)
         </span>
       </label>
       <input id="companyLine" type="text"
-             placeholder="JLS Trading Co. (2025-26) (COMP0005)" />
+             placeholder="JLS Trading Co. (2025-26) (COMP0005) or J / C" />
 
       <label for="invoiceNo">Invoice / Vch. No.</label>
       <input id="invoiceNo" type="text" placeholder="26213" />
@@ -174,7 +179,14 @@
         <div id="idleState" class="idle-message">
           Waiting for QR…
         </div>
+
+        <!-- QR placeholder -->
         <div id="qrCode" style="display:none;"></div>
+
+        <!-- JLS success image -->
+        <img id="successImage"
+             src="https://raw.githubusercontent.com/kgangola/jls-qr-payment/main/image.png" />
+
         <div id="paymentDetails" class="payment-info" style="display:none;"></div>
         <div id="statusText" class="status" style="display:none;"></div>
       </div>
@@ -200,12 +212,20 @@ const COMPANY_TO_VPA = {
 let currentPayment = null;
 let qrInstance = null;
 
-// Normalize Busy company line
+// Normalize Busy company line OR shortcut J/C
 function normalizeCompanyName(raw) {
   if (!raw) return "";
-  let base = raw.split("(")[0];
+  let base = raw.trim().toUpperCase();
+
+  // Shortcuts
+  if (base === "J") return "JLS TRADING CO";
+  if (base === "C") return "JIWAN LAL SAH GANGOLA & SONS";
+
+  // take text before first "("
+  base = base.split("(")[0];
   base = base.replace(/\s+/g, " ").trim();
-  base = base.toUpperCase().replace(/\./g, "");
+  base = base.toUpperCase();
+  base = base.replace(/\./g, "");
   return base;
 }
 
@@ -217,7 +237,10 @@ function getVpaForCompany(normalized) {
 }
 
 function buildUpiUrl(vpa, payeeName, amount) {
-  return `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR`;
+  const pa = encodeURIComponent(vpa);
+  const pn = encodeURIComponent(payeeName);
+  const am = encodeURIComponent(amount.toString());
+  return `upi://pay?pa=${pa}&pn=${pn}&am=${am}&cu=INR`;
 }
 
 // UI elements
@@ -233,18 +256,20 @@ const statusText = document.getElementById("statusText");
 
 const successBtn = document.getElementById("successBtn");
 const failBtn = document.getElementById("failBtn");
+const successImage = document.getElementById("successImage");
 
 function setIdleScreen() {
   currentPayment = null;
-  if (qrInstance) qrInstance.clear();
-
+  if (qrInstance) {
+    qrInstance.clear();
+  }
   qrCodeDiv.innerHTML = "";
   qrCodeDiv.style.display = "none";
+  successImage.style.display = "none";
 
   idleState.style.display = "block";
   paymentDetails.style.display = "none";
   statusText.style.display = "none";
-
   successBtn.disabled = true;
   failBtn.disabled = true;
 }
@@ -252,6 +277,7 @@ function setIdleScreen() {
 function setPendingScreen(payment) {
   idleState.style.display = "none";
   qrCodeDiv.style.display = "block";
+  successImage.style.display = "none";
   paymentDetails.style.display = "block";
   statusText.style.display = "block";
 
@@ -260,7 +286,8 @@ function setPendingScreen(payment) {
     `Company: <b>${payment.companyDisplay}</b><br>` +
     `Amount: <b>₹ ${payment.amount}</b>`;
 
-  statusText.textContent = "Status: PENDING – waiting for customer to pay…";
+  // 🔊 Soundbox announcement status
+  statusText.textContent = "Status: Soundbox Announcement";
   statusText.className = "status pending";
 
   successBtn.disabled = false;
@@ -270,21 +297,25 @@ function setPendingScreen(payment) {
 // SUCCESS / FAILURE
 function markPayment(status) {
   if (!currentPayment || currentPayment.status !== "PENDING") return;
-
   currentPayment.status = status;
 
   if (status === "PAID") {
-    statusText.textContent = "Status: SUCCESS – payment received.";
+    // Hide QR, show success image
+    qrCodeDiv.style.display = "none";
+    successImage.style.display = "block";
+
+    statusText.textContent = "Status: PAYMENT RECEIVED";
     statusText.className = "status paid";
 
-    // ⭐ HOLD SUCCESS SCREEN FOR 10 SECONDS
+    // Hold success screen for 10 seconds
     setTimeout(setIdleScreen, 10000);
 
   } else {
-    statusText.textContent = "Status: FAILURE – payment cancelled.";
+    // Failure: keep QR (or you can hide if you prefer)
+    statusText.textContent = "Status: PAYMENT FAILED";
     statusText.className = "status cancelled";
 
-    // Keep failure fast
+    // Quick reset on failure
     setTimeout(setIdleScreen, 800);
   }
 }
@@ -300,19 +331,27 @@ generateBtn.addEventListener("click", () => {
   const invoice = invoiceInput.value.trim();
   const amountStr = amountInput.value.trim();
 
-  if (!rawCompany || !invoice || !amountStr) {
-    alert("Please fill all fields.");
+  if (!rawCompany) {
+    alert("Please paste the company line from Busy or type J / C.");
+    return;
+  }
+  if (!invoice) {
+    alert("Please enter the Invoice / Vch. No.");
+    return;
+  }
+  if (!amountStr || Number(amountStr) <= 0) {
+    alert("Please enter a valid amount.");
     return;
   }
 
   const normalizedName = normalizeCompanyName(rawCompany);
   const vpa = getVpaForCompany(normalizedName);
   if (!vpa) {
-    alert("Could not identify company.");
+    alert("Could not identify company. Check spelling or use J / C.");
     return;
   }
 
-  const companyDisplay = rawCompany.split("(")[0].trim();
+  const companyDisplay = rawCompany.split("(")[0].trim() || normalizedName;
   const amount = Number(amountStr).toFixed(2);
   const upiUrl = buildUpiUrl(vpa, companyDisplay, amount);
 
@@ -320,9 +359,13 @@ generateBtn.addEventListener("click", () => {
     invoice,
     amount,
     companyDisplay,
+    companyNormalized: normalizedName,
+    vpa,
+    upiUrl,
     status: "PENDING"
   };
 
+  // Create QR
   qrCodeDiv.innerHTML = "";
   qrInstance = new QRCode(qrCodeDiv, {
     text: upiUrl,
@@ -333,9 +376,11 @@ generateBtn.addEventListener("click", () => {
   setPendingScreen(currentPayment);
 });
 
+// SUCCESS / FAILURE buttons
 successBtn.addEventListener("click", () => markPayment("PAID"));
 failBtn.addEventListener("click", () => markPayment("CANCELLED"));
 
+// Initial idle screen
 setIdleScreen();
 </script>
 
