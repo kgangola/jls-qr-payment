@@ -4,8 +4,10 @@
   <meta charset="UTF-8" />
   <title>JLS UPI QR Payment</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  
   <!-- QRious for QR generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js" defer></script>
+
   <style>
     * {
       box-sizing: border-box;
@@ -37,17 +39,12 @@
       flex: 1;
       min-width: 320px;
     }
-    .panel h2 {
-      margin-top: 0;
-      font-size: 16px;
-      margin-bottom: 8px;
-    }
     label {
-      display: block;
       font-size: 13px;
       margin-bottom: 4px;
+      display: block;
     }
-    input, select {
+    input {
       width: 100%;
       padding: 6px 8px;
       margin-bottom: 10px;
@@ -63,28 +60,17 @@
       font-size: 14px;
       font-weight: 600;
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .btn-primary {
-      background: #0052cc;
-      color: #fff;
-    }
-    .btn-success {
-      background: #1aa34a;
-      color: #fff;
-    }
-    .btn-fail {
-      background: #d93025;
-      color: #fff;
-    }
+    .btn-primary { background: #0052cc; color: #fff; }
+    .btn-success { background: #1aa34a; color: #fff; }
+    .btn-fail { background: #d93025; color: #fff; }
+
     .btn-row {
       display: flex;
       gap: 12px;
       justify-content: center;
       margin-top: 12px;
     }
+
     .qr-wrapper {
       text-align: center;
       padding: 12px;
@@ -93,288 +79,192 @@
       border: 1px dashed #ccc;
       min-height: 260px;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
     }
-    #qrCanvas {
-      margin-bottom: 8px;
+
+    #qrCanvas { margin-bottom: 8px; }
+
+    .status { font-weight: 600; margin-top: 8px; font-size: 14px; }
+    .status.pending { color: #0066cc; }
+    .status.paid { color: #0f9d58; }
+    .status.cancelled { color: #d93025; }
+
+    #successImage {
+      width: 220px;
+      display: none;
+      margin-top: 12px;
     }
-    .payment-info {
-      font-size: 14px;
-      margin-top: 4px;
-      line-height: 1.4;
-    }
-    .status {
-      margin-top: 8px;
-      font-weight: 600;
-      font-size: 14px;
-    }
-    .status.pending {
-      color: #d97706;
-    }
-    .status.paid {
-      color: #15803d;
-    }
-    .status.cancelled {
-      color: #b91c1c;
-    }
-    .idle-message {
-      font-size: 18px;
-      color: #666;
-    }
+
     @media (max-width: 768px) {
-      .layout {
-        flex-direction: column;
-      }
+      .layout { flex-direction: column; }
     }
   </style>
 </head>
+
 <body>
   <h1>JLS – UPI QR Payment</h1>
 
   <div class="layout">
-    <!-- LEFT: Input panel -->
+
+    <!-- Left Panel -->
     <div class="panel">
       <h2>Step 1 – Enter Billing Details</h2>
 
-      <label for="companyRaw">
-        Company line from Busy
-        <span style="font-weight: normal; font-size: 12px;">
-          (paste exactly what you see at bottom – e.g. <i>JLS Trading Co. (2025-26) (COMP0005)</i>)
-        </span>
-      </label>
-      <input id="companyRaw" type="text"
-             placeholder="JLS Trading Co. (2025-26) (COMP0005)" />
+      <label>Company line from Busy</label>
+      <input id="companyRaw" placeholder="Paste Busy line or type J / C" />
 
-      <label for="invoiceNo">Invoice / Vch. No.</label>
-      <input id="invoiceNo" type="text" placeholder="26213" />
+      <label>Invoice / Vch. No.</label>
+      <input id="invoiceNo" placeholder="26213" />
 
-      <label for="amount">Amount (₹)</label>
-      <input id="amount" type="number" min="0" step="0.01" placeholder="90.00" />
+      <label>Amount (₹)</label>
+      <input id="amount" type="number" placeholder="90" />
 
-      <button id="generateBtn" class="btn-primary" type="button">
-        Generate QR
-      </button>
-
-      <p style="font-size: 12px; color:#666; margin-top:8px;">
-        Note: While a QR is visible, you must click <b>SUCCESS</b> or <b>FAILURE</b>
-        before generating the next one. This prevents mixing customers.
-      </p>
+      <button id="generateBtn" class="btn-primary">Generate QR</button>
     </div>
 
-    <!-- RIGHT: QR / status panel -->
+    <!-- Right Panel -->
     <div class="panel">
       <h2>Step 2 – Show QR to Customer</h2>
 
       <div id="qrArea" class="qr-wrapper">
-        <div id="idleState" class="idle-message">
-          Waiting for QR…
-        </div>
+        <div id="idleMsg" style="font-size:18px;color:#777;">Waiting for QR…</div>
+
         <canvas id="qrCanvas" style="display:none;"></canvas>
-        <div id="paymentDetails" class="payment-info" style="display:none;"></div>
+
+        <img id="successImage" 
+             src="https://raw.githubusercontent.com/kgangola/jls-qr-payment/main/image.png" />
+
+        <div id="paymentDetails" style="display:none; font-size:14px;"></div>
         <div id="statusText" class="status" style="display:none;"></div>
       </div>
 
       <div class="btn-row">
-        <button id="successBtn" class="btn-success" type="button" disabled>
-          SUCCESS
-        </button>
-        <button id="failBtn" class="btn-fail" type="button" disabled>
-          FAILURE
-        </button>
+        <button id="successBtn" class="btn-success" disabled>SUCCESS</button>
+        <button id="failBtn" class="btn-fail" disabled>FAILURE</button>
       </div>
     </div>
+
   </div>
 
-  <script>
-    // --- CONFIG: Company → VPA mapping --------------------------------------
-    const COMPANY_TO_VPA = {
-      "JLS TRADING CO": "paytmqr2810050501011pn54jpiri49@paytm",
-      "JIWAN LAL SAH GANGOLA & SONS": "paytmqr2810050501011ni90w28cwja@paytm"
-    };
+<script>
+const COMPANY_TO_VPA = {
+  "JLS TRADING CO": "paytmqr2810050501011pn54jpiri49@paytm",
+  "JIWAN LAL SAH GANGOLA & SONS": "paytmqr2810050501011ni90w28cwja@paytm"
+};
 
-    // Global state of current payment
-    let currentPayment = null;
-    let qr; // QRious instance
+let qr;
+let currentPayment = null;
 
-    // Helper: normalize company name from Busy line
-    function normalizeCompanyName(raw) {
-      if (!raw) return "";
-      // Take text before first "("
-      let base = raw.split("(")[0];
-      base = base.replace(/\s+/g, " ").trim();
-      // Uppercase
-      base = base.toUpperCase();
-      // Remove dots
-      base = base.replace(/\./g, "");
-      return base;
-    }
+function normalizeCompany(raw) {
+  if (!raw) return "";
 
-    // Helper: pick VPA for normalized company
-    function getVpaForCompany(normalizedName) {
-      // Try direct match
-      if (COMPANY_TO_VPA[normalizedName]) {
-        return COMPANY_TO_VPA[normalizedName];
-      }
-      // Try a couple of loose fallbacks
-      if (normalizedName.includes("JLS TRADING")) {
-        return COMPANY_TO_VPA["JLS TRADING CO"];
-      }
-      if (normalizedName.includes("JIWAN LAL SAH GANGOLA")) {
-        return COMPANY_TO_VPA["JIWAN LAL SAH GANGOLA & SONS"];
-      }
-      return null;
-    }
+  raw = raw.trim().toUpperCase();
 
-    // Helper: build UPI URL
-    function buildUpiUrl(vpa, payeeName, amount) {
-      const pa = encodeURIComponent(vpa);
-      const pn = encodeURIComponent(payeeName);
-      const am = encodeURIComponent(amount.toString());
-      const cu = "INR";
-      return `upi://pay?pa=${pa}&pn=${pn}&am=${am}&cu=${cu}`;
-    }
+  // Shortcuts
+  if (raw === "J") return "JLS TRADING CO";
+  if (raw === "C") return "JIWAN LAL SAH GANGOLA & SONS";
 
-    // UI elements
-    const companyRawInput = document.getElementById("companyRaw");
-    const invoiceInput = document.getElementById("invoiceNo");
-    const amountInput = document.getElementById("amount");
-    const generateBtn = document.getElementById("generateBtn");
+  // Busy line cleanup
+  let clean = raw.split("(")[0].replace(/\./g, "").trim();
+  return clean;
+}
 
-    const qrCanvas = document.getElementById("qrCanvas");
-    const idleState = document.getElementById("idleState");
-    const paymentDetails = document.getElementById("paymentDetails");
-    const statusText = document.getElementById("statusText");
+function getVPA(company) {
+  return COMPANY_TO_VPA[company] || null;
+}
 
-    const successBtn = document.getElementById("successBtn");
-    const failBtn = document.getElementById("failBtn");
+function showIdle() {
+  document.getElementById("idleMsg").style.display = "block";
+  document.getElementById("qrCanvas").style.display = "none";
+  document.getElementById("successImage").style.display = "none";
+  document.getElementById("paymentDetails").style.display = "none";
+  document.getElementById("statusText").style.display = "none";
+  currentPayment = null;
 
-    function setIdleScreen() {
-      currentPayment = null;
-      if (qr) {
-        qr.value = "";
-      }
-      qrCanvas.style.display = "none";
-      paymentDetails.style.display = "none";
-      statusText.style.display = "none";
-      idleState.style.display = "block";
-      successBtn.disabled = true;
-      failBtn.disabled = true;
-    }
+  successBtn.disabled = true;
+  failBtn.disabled = true;
+}
 
-    function setPendingScreen(payment) {
-      idleState.style.display = "none";
-      qrCanvas.style.display = "block";
-      paymentDetails.style.display = "block";
-      statusText.style.display = "block";
+// Generate QR
+generateBtn.onclick = () => {
+  if (currentPayment) {
+    alert("A QR is already active. Click SUCCESS or FAILURE first.");
+    return;
+  }
 
-      paymentDetails.innerHTML =
-        `Invoice: <b>${payment.invoice}</b><br>` +
-        `Company: <b>${payment.companyDisplay}</b><br>` +
-        `Amount: <b>₹ ${payment.amount}</b>`;
+  let raw = companyRaw.value.trim();
+  let invoice = invoiceNo.value.trim();
+  let amount = amount.value.trim();
 
-      statusText.textContent = "Status: PENDING – waiting for customer to pay…";
-      statusText.className = "status pending";
+  if (!raw || !invoice || !amount) {
+    alert("Please fill all fields.");
+    return;
+  }
 
-      successBtn.disabled = false;
-      failBtn.disabled = false;
-    }
+  let company = normalizeCompany(raw);
+  let vpa = getVPA(company);
 
-    function markPayment(status) {
-      if (!currentPayment || currentPayment.status !== "PENDING") return;
-      currentPayment.status = status;
+  if (!vpa) {
+    alert("Unknown company. Use J or C shortcut, or correct Busy line.");
+    return;
+  }
 
-      if (status === "PAID") {
-        statusText.textContent = "Status: SUCCESS – payment received.";
-        statusText.className = "status paid";
-      } else {
-        statusText.textContent = "Status: FAILURE – payment cancelled.";
-        statusText.className = "status cancelled";
-      }
+  let upiString = `upi://pay?pa=${vpa}&pn=${encodeURIComponent(company)}&am=${amount}&cu=INR`;
 
-      // After a short delay, clear screen back to idle
-      setTimeout(setIdleScreen, 800);
-      // Here, in future, you can also sync this status to phone via backend.
-    }
+  qr.value = upiString;
+  currentPayment = { invoice, amount, company };
 
-    // Initialize QRious once QR library has loaded
-    window.addEventListener("load", function () {
-      qr = new QRious({
-        element: qrCanvas,
-        size: 220,
-        value: ""
-      });
-      setIdleScreen();
-    });
+  document.getElementById("idleMsg").style.display = "none";
+  document.getElementById("qrCanvas").style.display = "block";
 
-    // Generate QR button handler
-    generateBtn.addEventListener("click", function () {
-      if (currentPayment && currentPayment.status === "PENDING") {
-        alert("A payment is already pending. Please click SUCCESS or FAILURE before starting the next customer.");
-        return;
-      }
+  paymentDetails.style.display = "block";
+  paymentDetails.innerHTML =
+    `Invoice: <b>${invoice}</b><br>
+     Company: <b>${company}</b><br>
+     Amount: <b>₹ ${amount}</b>`;
 
-      const rawCompanyLine = companyRawInput.value.trim();
-      const invoice = invoiceInput.value.trim();
-      const amountStr = amountInput.value.trim();
+  statusText.style.display = "block";
+  statusText.textContent = "Status: Soundbox Announcement";
+  statusText.className = "status pending";
 
-      if (!rawCompanyLine) {
-        alert("Please paste the company line from Busy.");
-        return;
-      }
-      if (!invoice) {
-        alert("Please enter the Invoice / Vch. No.");
-        return;
-      }
-      if (!amountStr || Number(amountStr) <= 0) {
-        alert("Please enter a valid amount.");
-        return;
-      }
+  successBtn.disabled = false;
+  failBtn.disabled = false;
+};
 
-      const normalizedName = normalizeCompanyName(rawCompanyLine);
-      const vpa = getVpaForCompany(normalizedName);
+// Success
+successBtn.onclick = () => {
+  if (!currentPayment) return;
 
-      if (!vpa) {
-        alert("Could not identify company from this line. Check that it is JLS Trading Co. or Jiwan Lal Sah Gangola & Sons.");
-        return;
-      }
+  qrCanvas.style.display = "none";
+  successImage.style.display = "block";
 
-      const companyDisplay = rawCompanyLine.split("(")[0].trim();
-      const amount = Number(amountStr).toFixed(2);
+  statusText.textContent = "Status: PAYMENT RECEIVED";
+  statusText.className = "status paid";
 
-      const upiUrl = buildUpiUrl(vpa, companyDisplay, amount);
+  setTimeout(showIdle, 900);
+};
 
-      // Create new payment object
-      currentPayment = {
-        invoice,
-        amount,
-        companyDisplay,
-        companyNormalized: normalizedName,
-        vpa,
-        upiUrl,
-        status: "PENDING",
-        createdAt: new Date().toISOString()
-      };
+// Failure
+failBtn.onclick = () => {
+  if (!currentPayment) return;
 
-      // Render QR
-      qr.value = upiUrl;
-      setPendingScreen(currentPayment);
+  statusText.textContent = "Status: PAYMENT FAILED";
+  statusText.className = "status cancelled";
 
-      // In future, here you can also send `currentPayment`
-      // to a backend (Supabase / Firebase) so that the same
-      // QR appears on your phone in real time.
-    });
+  setTimeout(showIdle, 900);
+};
 
-    // SUCCESS / FAILURE button handlers
-    successBtn.addEventListener("click", function () {
-      markPayment("PAID");
-    });
-
-    failBtn.addEventListener("click", function () {
-      markPayment("CANCELLED");
-    });
-  </script>
+// Init QR
+window.onload = () => {
+  qr = new QRious({
+    element: document.getElementById("qrCanvas"),
+    size: 220,
+    value: ""
+  });
+  showIdle();
+};
+</script>
 </body>
 </html>
-
