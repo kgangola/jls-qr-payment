@@ -244,15 +244,12 @@ function markPayment(status) {
   if (status === "PAID") {
     statusText.textContent = "Status: SUCCESS – payment received.";
     statusText.className = "status paid";
-
-    // STAY LONGER → 10 SECONDS
+    // ✅ Keep success visible for 10 seconds
     setTimeout(setIdleScreen, 10000);
-
   } else {
     statusText.textContent = "Status: FAILURE – payment cancelled.";
     statusText.className = "status cancelled";
-
-    // FAILURE remains short
+    // ❗ Failure clears fast (0.8s)
     setTimeout(setIdleScreen, 800);
   }
 }
