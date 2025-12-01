@@ -246,19 +246,19 @@ function buildUpiUrl(vpa, payeeName, amount) {
 }
 
 // UI elements
-const companyInput = document.getElementById("companyLine");
-const invoiceInput = document.getElementById("invoiceNo");
-const amountInput = document.getElementById("amount");
-const generateBtn = document.getElementById("generateBtn");
+const companyInput   = document.getElementById("companyLine");
+const invoiceInput   = document.getElementById("invoiceNo");
+const amountInput    = document.getElementById("amount");
+const generateBtn    = document.getElementById("generateBtn");
 
-const qrCodeDiv = document.getElementById("qrCode");
-const idleState = document.getElementById("idleState");
+const qrCodeDiv      = document.getElementById("qrCode");
+const idleState      = document.getElementById("idleState");
 const paymentDetails = document.getElementById("paymentDetails");
-const statusText = document.getElementById("statusText");
+const statusText     = document.getElementById("statusText");
 
-const successBtn = document.getElementById("successBtn");
-const failBtn = document.getElementById("failBtn");
-const successImage = document.getElementById("successImage");
+const successBtn     = document.getElementById("successBtn");
+const failBtn        = document.getElementById("failBtn");
+const successImage   = document.getElementById("successImage");
 
 function setIdleScreen() {
   currentPayment = null;
@@ -310,7 +310,6 @@ function markPayment(status) {
 
     // Hold success screen for 10 seconds
     setTimeout(setIdleScreen, 10000);
-
   } else {
     statusText.textContent = "Status: PAYMENT FAILED";
     statusText.className = "status cancelled";
@@ -320,16 +319,16 @@ function markPayment(status) {
   }
 }
 
-// 🔹 NEW: Read URL params and auto-generate QR if all three are present
+// NEW: Read URL params and auto-generate QR if all three are present
 function applyUrlParamsAndMaybeGenerate() {
-  const params = new URLSearchParams(window.location.search);
+  const params       = new URLSearchParams(window.location.search);
   const companyParam = params.get("company");
   const invoiceParam = params.get("invoice");
-  const amountParam = params.get("amount");
+  const amountParam  = params.get("amount");
 
   if (companyParam) companyInput.value = companyParam;
   if (invoiceParam) invoiceInput.value = invoiceParam;
-  if (amountParam) amountInput.value = amountParam;
+  if (amountParam)  amountInput.value  = amountParam;
 
   // Auto-generate QR only if all three are present
   if (companyParam && invoiceParam && amountParam) {
@@ -345,8 +344,8 @@ generateBtn.addEventListener("click", () => {
   }
 
   const rawCompany = companyInput.value.trim();
-  const invoice = invoiceInput.value.trim();
-  const amountStr = amountInput.value.trim();
+  const invoice    = invoiceInput.value.trim();
+  const amountStr  = amountInput.value.trim();
 
   if (!rawCompany) {
     alert("Please paste the company line from Busy or type J / C.");
@@ -362,15 +361,15 @@ generateBtn.addEventListener("click", () => {
   }
 
   const normalizedName = normalizeCompanyName(rawCompany);
-  const vpa = getVpaForCompany(normalizedName);
+  const vpa            = getVpaForCompany(normalizedName);
   if (!vpa) {
     alert("Could not identify company. Check Busy line or use J / C.");
     return;
   }
 
   const companyDisplay = rawCompany.split("(")[0].trim() || normalizedName;
-  const amount = Number(amountStr).toFixed(2);
-  const upiUrl = buildUpiUrl(vpa, companyDisplay, amount);
+  const amount         = Number(amountStr).toFixed(2);
+  const upiUrl         = buildUpiUrl(vpa, companyDisplay, amount);
 
   currentPayment = {
     invoice,
